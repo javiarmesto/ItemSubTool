@@ -1,0 +1,11 @@
+# AL / Business Central typical ignores
+.alpackages/
+.vscode/.alcache/
+*.app
+# Local only artifacts
+.snapshots/
+Trash/
+# OS / tooling
+.DS_Store
+Thumbs.db
+node_modules/
