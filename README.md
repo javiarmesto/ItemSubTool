@@ -1,228 +1,156 @@
-# Item Substitutes API - MCP Tool Integration
+# Item Substitution API for Business Central
 
-Esta extensión AL implementa una API completa para gestionar productos sustitutos en Business Central, optimizada para ser utilizada como herramienta en MCP (Model Context Protocol) servers.
+## Overview
 
-## Características Principales
+This extension provides a robust and secure API for managing item substitutions within Microsoft Dynamics 365 Business Central.
 
-- ✅ **API RESTful** para CRUD de sustituciones
-- ✅ **Codeunit MCP Tool** con funciones especializadas
-- ✅ **Validación de reglas de negocio** (circular references, items existentes)
-- ✅ **Respuestas JSON estructuradas** para integración MCP
-- ✅ **Soft delete** mediante fechas de expiración
-- ✅ **Auditoría automática** (Created By, Creation DateTime)
-- ✅ **Priorización** de sustitutos (1-10)
+It is designed with a layered architecture to ensure data integrity and to provide a clean, easy-to-use interface for external applications. Key features include advanced validation against circular dependencies and a dedicated set of API actions for simplified integration.
 
-## Endpoints Disponibles
+## Key Features
 
-### 1. API RESTful (OData v4) - CRUD Estándar
+- **CRUD Operations:** Create, Read, Update, and Deactivate item substitutions.
+- **Advanced Validation:** Automatically detects and prevents circular substitute references (e.g., A -> B -> C -> A).
+- **Soft-Delete:** Deactivating a substitute sets an expiry date rather than deleting the record, preserving historical data.
+- **Layered Architecture:** A clear separation of concerns between the API presentation layer, the service/tool layer, and the core business logic layer.
+- **Dual API Models:**
+  1.  **Actions API (Recommended):** A set of explicit, service-enabled procedures for common operations.
+  2.  **Standard OData API:** Standard RESTful access to the underlying data entities.
 
-```http
-GET    /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstitutions
-POST   /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstitutions
-PATCH  /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstitutions({keys})
-DELETE /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstitutions({keys})
-```
+---
 
-### 2. MCP Actions API (Unbound Actions) - **Recomendado para MCP Servers**
+## API Usage (Recommended: Actions API)
 
-```http
-POST /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstituteActions/Microsoft.NAV.CreateItemSubstitute
-POST /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstituteActions/Microsoft.NAV.GetItemSubstitutes  
-POST /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstituteActions/Microsoft.NAV.UpdateItemSubstitute
-POST /api/custom/itemSubstitution/v1.0/companies({id})/itemSubstituteActions/Microsoft.NAV.DeactivateItemSubstitute
-```
+The recommended way to interact with this extension is through the **Actions API**, which simplifies calls from external systems.
 
-### 3. Legacy Web Services (Fallback)
+**Base URL:**
+`{BC_Base_URL}/api/custom/itemSubstitution/v1.0/companies({companyId})/itemSubstituteActions({dummyKey})`
 
-```http
-POST /ODataV4/Company('{company}')/ItemSubstituteMCPTool_CreateItemSubstitute
-POST /ODataV4/Company('{company}')/ItemSubstituteMCPTool_GetItemSubstitutes
-POST /ODataV4/Company('{company}')/ItemSubstituteMCPTool_UpdateItemSubstitute
-POST /ODataV4/Company('{company}')/ItemSubstituteMCPTool_DeactivateItemSubstitute
-```
+Replace `{dummyKey}` with a placeholder, for example: `itemNo='-',sequence=0`.
 
-## Uso en MCP Server
+### 1. Get Item Substitutes
 
-### Ejemplo 1: Crear Sustituto
+Retrieves all valid substitutes for a given item.
 
-```javascript
-// Método 1: Unbound Action (Recomendado para MCP)
-const result = await callBusinessCentral({
-  method: 'POST',
-  url: '/api/custom/itemSubstitution/v1.0/companies(\'CRONUS ES\')/itemSubstituteActions/Microsoft.NAV.CreateItemSubstitute',
-  body: {
-    ItemNo: '1000',
-    SubstituteNo: '1001',
-    Priority: 1,
-    EffectiveDate: '2025-08-11',
-    ExpiryDate: '2025-12-31',
-    Notes: 'Sustituto preferido para temporada alta'
+- **Action:** `GetItemSubstitutes`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+      "itemNo": "ITEM001"
   }
-});
-
-// Método 2: Web Service Legacy (Fallback)
-const resultLegacy = await callBusinessCentral({
-  method: 'POST',
-  url: '/ODataV4/Company(\'CRONUS ES\')/ItemSubstituteMCPTool_CreateItemSubstitute',
-  body: {
-    ItemNo: '1000',
-    SubstituteNo: '1001',
-    Priority: 1,
-    EffectiveDate: '2025-08-11',
-    ExpiryDate: '2025-12-31',
-    Notes: 'Sustituto preferido para temporada alta'
+  ```
+- **Success Response (200 OK):**
+  ```json
+  {
+      "success": true,
+      "itemNo": "ITEM001",
+      "substitutes": [
+          {
+              "itemNo": "ITEM001",
+              "substituteNo": "SUB001",
+              "priority": 1,
+              "effectiveDate": "2025-08-11",
+              "notes": "Primary substitute"
+          }
+      ],
+      "count": 1
   }
-});
-```
-{
-  "success": true,
-  "message": "Item substitute created successfully",
-  "data": {
-    "itemNo": "1000",
-    "substituteNo": "1001", 
-    "priority": 1,
-    "effectiveDate": "2025-08-11",
-    "expiryDate": "2025-12-31",
-    "notes": "Sustituto preferido para temporada alta",
-    "createdBy": "USER123",
-    "creationDateTime": "2025-08-11T14:30:00"
-  }
-}
-```
+  ```
 
-### Ejemplo 2: Obtener Sustitutos
+### 2. Create Item Substitute
 
-```javascript
-// Método 1: Unbound Action (Recomendado para MCP)
-const substitutes = await callBusinessCentral({
-  method: 'POST',
-  url: '/api/custom/itemSubstitution/v1.0/companies(\'CRONUS ES\')/itemSubstituteActions/Microsoft.NAV.GetItemSubstitutes',
-  body: {
-    ItemNo: '1000'
-  }
-});
+Creates a new, validated substitute relationship.
 
-// Método 2: Web Service Legacy (Fallback)
-const substitutesLegacy = await callBusinessCentral({
-  method: 'POST',
-  url: '/ODataV4/Company(\'CRONUS ES\')/ItemSubstituteMCPTool_GetItemSubstitutes',
-  body: {
-    ItemNo: '1000'
-  }
-});
-```
-
-Respuesta JSON:
-{
-  "success": true,
-  "itemNo": "1000",
-  "count": 2,
-  "substitutes": [
-    {
-      "itemNo": "1000",
-      "substituteNo": "1001",
-      "priority": 1,
-      "effectiveDate": "2025-08-11",
-      "notes": "Sustituto preferido"
-    },
-    {
-      "itemNo": "1000", 
-      "substituteNo": "1002",
+- **Action:** `CreateItemSubstitute`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+      "itemNo": "ITEM001",
+      "substituteNo": "SUB002",
       "priority": 2,
-      "effectiveDate": "2025-08-11",
-      "notes": "Sustituto secundario"
-    }
-  ]
-}
-```
-
-### Ejemplo 3: Actualizar Prioridad
-```javascript
-const update = await callBusinessCentral({
-  method: 'POST',
-  url: '/ODataV4/Company(\'CRONUS ES\')/ItemSubstituteMCPTool_UpdateItemSubstitute',
-  body: {
-    ItemNo: '1000',
-    SubstituteNo: '1001',
-    NewPriority: 3,
-    NewNotes: 'Actualizado por sistema MCP'
+      "effectiveDate": "2025-01-01",
+      "expiryDate": "2026-01-01",
+      "notes": "Promotional substitute"
   }
-});
-```
-
-### Ejemplo 4: Desactivar Sustituto (Soft Delete)
-```javascript
-const deactivate = await callBusinessCentral({
-  method: 'POST',
-  url: '/ODataV4/Company(\'CRONUS ES\')/ItemSubstituteMCPTool_DeactivateItemSubstitute',
-  body: {
-    ItemNo: '1000',
-    SubstituteNo: '1001'
+  ```
+- **Success Response (200 OK):**
+  ```json
+  {
+      "success": true,
+      "message": "Item substitute created successfully",
+      "data": {
+          "itemNo": "ITEM001",
+          "substituteNo": "SUB002",
+          "priority": 2,
+          "effectiveDate": "2025-01-01",
+          "expiryDate": "2026-01-01",
+          "notes": "Promotional substitute",
+          "createdBy": "USER",
+          "creationDateTime": "2025-08-11T14:30:00"
+      }
   }
-});
-```
+  ```
+- **Error Response (200 OK):**
+  ```json
+  {
+      "success": false,
+      "error": "Se detectó referencia circular entre ITEM001 y SUB002."
+  }
+  ```
 
-## Configuración
+### 3. Update Item Substitute
 
-### 1. Permisos
-Asignar permission set `ITEMSUBS API` a usuarios/aplicaciones que utilizarán la API.
+Updates the `Priority` or `Notes` of an existing substitute.
 
-### 2. Autenticación
-Configurar OAuth 2.0 o API Key según políticas de tu entorno Business Central.
+- **Action:** `UpdateItemSubstitute`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+      "itemNo": "ITEM001",
+      "substituteNo": "SUB001",
+      "newPriority": 5,
+      "newNotes": "Updated notes"
+  }
+  ```
 
-### 3. Compilación
-```powershell
-# Desde VS Code con AL Extension
-Ctrl+Shift+P > AL: Publish
-```
+### 4. Deactivate Item Substitute
 
-## Validaciones Implementadas
+Performs a soft-delete by setting the `Expiry Date` to the current date.
 
-1. **Items deben existir** - Valida que tanto el item principal como el sustituto existan
-2. **No auto-referencia** - Un item no puede ser sustituto de sí mismo  
-3. **No referencias circulares** - Detecta cadenas circulares (A→B→C→A)
-4. **Prioridad válida** - Range 1-10, donde 1 es mayor prioridad
-5. **Fechas lógicas** - Effective Date <= Expiry Date
-6. **Duplicados** - No permite crear relaciones que ya existen
+- **Action:** `DeactivateItemSubstitute`
+- **Method:** `POST`
+- **Request Body:**
+  ```json
+  {
+      "itemNo": "ITEM001",
+      "substituteNo": "SUB001"
+  }
+  ```
 
-## Estructura de Respuestas JSON
+---
 
-Todas las funciones MCP devuelven JSON estructurado:
+## Architecture Overview
 
-```typescript
-interface MCPResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
-  data?: any;
-}
-```
+The extension is built with a clean, layered architecture:
 
-## Testing
+1.  **API Layer (`Page` objects):**
+    - `Page 50212 "Item Substitute Actions API"`: Exposes the service-enabled actions (Recommended).
+    - `Page 50210 "Item Substitution API"`: Provides standard OData REST access (`GET`, `POST`, `PATCH`, `DELETE`).
+    - `Page 50211 "Item Sub Chain API"`: A read-only endpoint to get the full substitution chain.
 
-Ejecutar tests unitarios:
-```powershell
-# Desde terminal AL
-Test-ALCodeunit -CodeunitId 50240 -CompanyName "CRONUS ES"
-```
+2.  **Service/Tool Layer (`Codeunit 50204 "Item Substitute MCP Tool"`):**
+    - Acts as a facade for the API layer.
+    - Handles input validation and formats consistent JSON responses for the actions.
+    - Orchestrates calls to the core logic layer.
 
-## Troubleshooting
+3.  **Core Logic Layer (`Codeunit 50202 "Substitute Management"`):**
+    - Contains the critical business logic, including the circular dependency detection algorithm.
+    - Ensures data integrity regardless of how the data is accessed.
 
-### Error: "Field does not exist"
-- Ejecutar `AL: Download Symbols` en VS Code
-- Verificar que los símbolos base estén actualizados
+---
 
-### Error: "Permission denied"
-- Verificar assignment del permission set `ITEMSUBS API`
-- Validar configuración OAuth/API Key
+## Setup & Installation
 
-### Error: "Circular reference detected"
-- Normal - es una validación de negocio
-- Revisar cadena de sustituciones antes de crear nueva relación
-
-## Roadmap
-
-- [ ] Bulk operations para múltiples sustitutos
-- [ ] Integration events para workflows personalizados  
-- [ ] Performance optimization para cadenas >100 items
-- [ ] Webhooks para notificaciones en tiempo real
+*(Placeholder for setup and installation instructions)*
