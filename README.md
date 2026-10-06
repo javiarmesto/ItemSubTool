@@ -1,5 +1,21 @@
 # Item Substitution API for Business Central
 
+## Antes de empezar
+
+Extensión de ejemplo para consultar y gestionar sustitutos de artículos mediante APIs y acciones AL.
+
+**Referencia del checkout:** `application 26.0.0.0`, `runtime 15.2`; extensión `ItemSubsAPI` versión `1.0.0.0`. Es la configuración del manifiesto, no una prueba de compatibilidad con otros entornos.
+
+1. Clona `https://github.com/javiarmesto/ItemSubTool.git` y abre la carpeta en VS Code con AL Language.
+2. Configura tu sandbox en `.vscode/launch.json` (créalo si falta), comprueba las dependencias de [app.json](app.json) y descarga símbolos con **AL: Download Symbols**.
+3. Compila con `Ctrl+Shift+B`; publica en el sandbox con `F5` cuando hayas completado la configuración específica del ejemplo.
+4. Sigue los datos de prueba y comprueba las respuestas de la API en tu sandbox. Crear, actualizar o desactivar sustitutos modifica datos; registra la respuesta real, no solo el ejemplo del README.
+
+**Mapa del ejemplo:** [SETUP_GUIDE](SETUP_GUIDE.md) → [TEST_DATA](TEST_DATA.md) → [VALIDATION_SCRIPTS](VALIDATION_SCRIPTS.md); `src/` para implementación y `test/` para pruebas.
+
+**Límites:** Las respuestas JSON de esta guía son ejemplos. Comprueba rutas, publicación y autorización en tu entorno; no se ha confirmado una licencia aplicable. La revisión documental del 6 de octubre de 2026 es estática; no acredita compilación, publicación ni llamadas a servicios externos.
+
+
 ## Overview
 
 This extension provides a robust and secure API for managing item substitutions within Microsoft Dynamics 365 Business Central.
